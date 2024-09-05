@@ -1,0 +1,6 @@
+services:
+  ardrone:
+    build: .
+    network_mode: "host"
+    volumes:
+      - ./:/workspace

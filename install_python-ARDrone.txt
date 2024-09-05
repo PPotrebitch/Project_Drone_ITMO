@@ -1,0 +1,15 @@
+1. открываем заготовленную папку под проект в vs.
+2. В терминале создаём виртуальное окружение следующей командой:
+	python3 -m venv .venv
+3. Создаем клон проекта с GitHub: 
+	git clone https://github.com/lilyinstarlight/python-ardrone.git
+4. заходим в виртуальное окружение cd python-ardrone/: 
+	source .venv/bin/activate
+после чего слева должно появиться (.venv)
+5. Заходим в папку"python-ardrone":
+	cd python-ardrone/
+6. Запускаем установку всех библиотек:
+	python3 -m pip install .
+7. Если ругается на отсутствие библиотеки, то уста её:
+	пример ошибки: отсутствие библиотеки libswscale-dev
+	исправляем ошибку: sudo apt install libswscale-dev
