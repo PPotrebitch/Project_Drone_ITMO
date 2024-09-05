@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "avcodec.h": "c",
+        "swscale.h": "c",
+        "avformat.h": "c",
+        "version.h": "c"
+    }
+}
