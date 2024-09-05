@@ -51,7 +51,7 @@ class PID_controller():    # Класс для работы с ПИД-регул
     def updatePID(self, e_now: float, e_last: float) -> float:
         return self.updateP(e_now) + self.k_i * self.Integral(e_now + e_last) + self.k_d * self.Differential(e_now, e_last)
 
-class my_ARDrone(ardrone.ARDrone):#  Добавляем недостающие команды для управлением БПЛА
+class my_ARDrone(ardrone.ARDrone):  #  Добавляем недостающие команды для управлением БПЛА
 
     def set_yaw(self, yaw):
         self.yaw = yaw
@@ -178,7 +178,7 @@ def get_aruco_center(img):   # Функция для отслеживания Ar
    else:
        return None, None
 
-def get_line_points(img):  # Функция для следования по линии
+def get_line_points(img):  # Алгоритм для определения линии на изображения
     XY=[]
     HImage, WImage = h_and_w_img(img)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -204,7 +204,7 @@ def get_line_points(img):  # Функция для следования по л�
     # time.sleep(0.008)
     return XY #,img
 
-def get_line_xy(img):
+def get_line_xy(img):   # Функция для следования по линии 
     XY = []
     XY = get_line_points(img)
     if XY != [] and len(XY) >= 3:
