@@ -116,28 +116,6 @@ def detect_markers(image):
         else:
             return None, None, None
     # return aruco_type_list
-
-
-    aruco_dict = cv2.aruco.getPredefinedDictionary(aruco_dict_type)
-    parameters = cv2.aruco.DetectorParameters()
-
-    corners, ids, rejected = cv2.aruco.detectMarkers(frame, aruco_dict, parameters=parameters)
-
-
-
-    if len(corners) > 0:
-        for i in range(0, len(ids)):
-
-            rvec, tvec, markerPoints = cv2.aruco.estimatePoseSingleMarkers(corners[i], 0.025, matrix_coefficients, distortion_coefficients)
-
-            cv2.aruco.drawDetectedMarkers(frame, corners)
-
-            cv2.drawFrameAxes(frame, matrix_coefficients, distortion_coefficients, rvec, tvec, 0.01)
-
-
-    # print(ids)
-    return frame
-
 # функции restoreTerminalSettings, saveTerminalSettings и getKey нужны для обработки сигнала с клавиатуры
 
 def restoreTerminalSettings(old_settings):
