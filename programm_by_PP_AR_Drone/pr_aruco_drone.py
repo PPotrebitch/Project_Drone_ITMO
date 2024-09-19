@@ -9,9 +9,10 @@ import cv2
 import time
 
 import threading
-mutex = threading.Lock()
+mutex = threading.Lock() # блотировка и разблокировка потоков
 
-
+H = 360  # высота изобразения
+W =  640  # ширина изображения
 
 class PID_controller():    # Класс для работы с ПИД-регулятором
 
@@ -118,26 +119,6 @@ def detect_markers(image):
     # return aruco_type_list
 
 
-    aruco_dict = cv2.aruco.getPredefinedDictionary(aruco_dict_type)
-    parameters = cv2.aruco.DetectorParameters()
-
-    corners, ids, rejected = cv2.aruco.detectMarkers(frame, aruco_dict, parameters=parameters)
-
-
-
-    if len(corners) > 0:
-        for i in range(0, len(ids)):
-
-            rvec, tvec, markerPoints = cv2.aruco.estimatePoseSingleMarkers(corners[i], 0.025, matrix_coefficients, distortion_coefficients)
-
-            cv2.aruco.drawDetectedMarkers(frame, corners)
-
-            cv2.drawFrameAxes(frame, matrix_coefficients, distortion_coefficients, rvec, tvec, 0.01)
-
-
-    # print(ids)
-    return frame
-
 # функции restoreTerminalSettings, saveTerminalSettings и getKey нужны для обработки сигнала с клавиатуры
 
 def restoreTerminalSettings(old_settings):
@@ -156,13 +137,14 @@ def getKey(settings, timeout):
     termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)
     return key
 
-def get_new_points( v, q, h, w):  # Получаем координату точки в новой системе координат,
+def get_new_points( v, q):  # Получаем координату точки в новой системе координат,
     '''
     где  оX вверх,а oY влево.
     (g, v) - центр aruco, h и w - высота и ширина изображения.
     '''
-    y = -q + w/2
-    x = -v + h/2
+    global H, W
+    y = -q + W/2
+    x = -v + H/2
     return x, y
 
 def h_and_w_img(img):  # Функция, которая возвращает размер изображения (высоту и ширину)
@@ -178,51 +160,65 @@ def get_aruco_center(img):   # Функция для отслеживания Ar
    else:
        return None, None
 
-def get_line_points(img):  # Функция для следования по линии
+def get_line_points(img):  # Алгоритм для определения линии на изображения
     XY=[]
-    HImage, WImage = h_and_w_img(img)
+    global H, W
+    HImage, WImage = H, W
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     blurred = cv2.GaussianBlur(gray, (7, 7), 0)
     thresh = cv2.adaptiveThreshold(blurred, 255,
 	cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 75, 28)
-    # cv2.imshow("1", thresh)
-    # print("-")
+    w_3c = np.full_like(thresh, fill_value=(255))
+    center = (thresh.shape[1]//2, thresh.shape[0]//2)
+    radius = int(min(center) * .7)
+    zeros = np.zeros_like(thresh[:,:], dtype='uint8')
+    masked = cv2.bitwise_and(thresh, w_3c, mask=zeros)
+    contour=cv2.findContours(masked, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+    contour=contour[0]
+    if len(contour)>0:
+        masked = masked
+    else:
+        masked = thresh
+
     for i in range(9,-1,-1):
-        obrezimage = thresh[(HImage//10)*i:(HImage//10)*(i+1), 0:WImage]
+        obrezimage = masked[((radius//5)*i+(HImage//2 - radius)):((radius//5)*(i+1)+(HImage//2 - radius)), 0:WImage]
         contours=cv2.findContours(obrezimage, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
         contours=contours[0]
-        #cv2.drawContours(image,contours,0,(255,0,0),5)
-        # cv2.imshow("18", obrezimage)
         if len(contours) > 1:
             contours=sorted(contours, key=cv2.contourArea, reverse=True)
             (x,y,w,h)=cv2.boundingRect(contours[0])
             xx=int(x + w//2)
             yy=int(y + h//2)+(HImage//10)*i
-            # cv2.rectangle(img,(xx,yy), (xx+3, yy+3),(255,0,0), 5)
-            # cv2.imwrite("Line_stream.jpg", img)
+            cv2.rectangle(img,(xx,yy), (xx+2, yy+2),(255,0,0), 5)
+            # cv2.imwrite("Line_stream.jpg", image)
             XY.append([xx, yy])
-    # time.sleep(0.008)
-    return XY #,img
+    return XY
 
-def get_line_xy(img):
+def get_line_xy(img):  # Функция для следования по линии
+    global H, W
     XY = []
     XY = get_line_points(img)
     if XY != [] and len(XY) >= 3:
-    # print(XY)
-        X, Y = XY[-3][0], XY[-3][1]
         # print(XY)
-        # print(f'X = {X}, Y = {Y}')
+        # X, Y = XY[-3][0], XY[-3][1]
+        X, Y = 0, 0
+        for cord_dot in XY:
+            if (H//2 - cord_dot[1]) > 0:
+                X = cord_dot[0]
+                Y = cord_dot[1]
+                # print(f'X = {X}, Y = {Y}')
+                break
 
-        h, w = h_and_w_img(img)
-        cv2.circle(img, (int(w//2), int(h//2)), 5, (0, 255, 0), -1)
-        cv2.circle(img, (int(w//2), int(h//2 - 50)), 5, (0, 0, 255), -1)
-        cv2.circle(img, (int(X), int(Y)), 5, (255, 0, 0), -1)
+
+        cv2.circle(img, (int(W//2), int(H//2)), 5, (0, 255, 0), -1)
+        cv2.circle(img, (int(W//2), int(H//2 - 50)), 5, (0, 0, 255), -1)
+        cv2.circle(img, (int(X), int(Y)), 7, (255, 255, 0), 1)
         cv2.imwrite("Line_stream.jpg", img)
 
         # line_x, line_y = get_new_points(X, Y, h, w)
 
-        line_x = h//2 - Y
-        line_y = w//2 - X
+        line_x = H//2 - Y
+        line_y = W//2 - X
         # print(f'line_x = {line_x}, line_y = {line_y}')
         # print(X, w//2, Y, h//2, line_x, line_y)
     else:
@@ -289,10 +285,9 @@ def control_line(drone: my_ARDrone):  # Запуск алгоритма по л�
 
     # Подбираем коэффициенты для ПИД
     PID_line_x = PID_controller(k_p=0.0, k_i=0.0, k_d=0.0, h=0.04)
-    PID_line_y = PID_controller(k_p=0.0, k_i=0.0, k_d=0.0, h=0.04)
-    # PID_line_x = PID_controller(k_p=1.5*10**(-4), k_i=0.0, k_d=0.0, h=0.04)
-    # PID_line_y = PID_controller(k_p=1.25*10**(-4), k_i=0.0, k_d=0.0, h=0.04)
-    PID_yaw = PID_controller(k_p=0.5, k_i=0.0, k_d=0.0, h=0.04)
+    PID_line_y = PID_controller(k_p=4*10**(-4), k_i=0.0, k_d=0.0, h=0.04)
+    PID_yaw = PID_controller(k_p=0.0, k_i=0.0, k_d=0.0, h=0.04)
+    
 
     # Desired line point
     cx = 0
@@ -302,7 +297,7 @@ def control_line(drone: my_ARDrone):  # Запуск алгоритма по л�
     vx = 0
     vy = 0
     wz = 0
-
+    
     print("[line] Start")
     while not CHANGE_STATE:
         tic = time.time()
@@ -315,14 +310,18 @@ def control_line(drone: my_ARDrone):  # Запуск алгоритма по л�
             vx = PID_line_x.updateP(e_now=cx)
             vy = PID_line_y.updateP(e_now=cy)
             wz = PID_yaw.updateP(e_now=etheta)
+            if wz > 1:
+                wz = 1
+            elif wz < -1:
+                wz = -1
+            drone.move_xyzw(vx, vy, 0, wz)
         else:
             vx = 0
             vy = 0
             wz = 0
+            drone.hover()
 
-        print(f' vx = {vx}, vy = {vy}, wz = {wz}')
-
-        drone.move_xyzw(vx, vy, 0, wz)
+        # print(f' vx = {vx}, vy = {vy}, wz = {wz}')
 
         toc = time.time()
         sleepTime = 0.04 - (toc - tic)
@@ -398,7 +397,8 @@ if __name__ == "__main__":
     control_thread.start()
 
     try:
-
+        # i = 0
+        # program_starts = time.time()
         while True:
             # print("Ping")
 
@@ -436,6 +436,9 @@ if __name__ == "__main__":
                 time.sleep(sleepTime)
             else:
                 print("[main] warning")
+            # i += 1
+            #now = time.time()
+            # print("It has been {0} seconds since the loop started".format(now - program_starts))
 
     except KeyboardInterrupt as e:
         print(e)
