@@ -199,8 +199,6 @@ def get_line_xy(img):  # Функция для следования по лин�
     XY = []
     XY = get_line_points(img)
     if XY != [] and len(XY) >= 3:
-        # print(XY)
-        # X, Y = XY[-3][0], XY[-3][1]
         X, Y = 0, 0
         for cord_dot in XY:
             if (H//2 - cord_dot[1]) > 0:
@@ -397,8 +395,6 @@ if __name__ == "__main__":
     control_thread.start()
 
     try:
-        # i = 0
-        # program_starts = time.time()
         while True:
             # print("Ping")
 
@@ -436,9 +432,6 @@ if __name__ == "__main__":
                 time.sleep(sleepTime)
             else:
                 print("[main] warning")
-            # i += 1
-            #now = time.time()
-            # print("It has been {0} seconds since the loop started".format(now - program_starts))
 
     except KeyboardInterrupt as e:
         print(e)
