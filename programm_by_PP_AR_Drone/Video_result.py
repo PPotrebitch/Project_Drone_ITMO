@@ -3,7 +3,8 @@ import time
 HImage = None
 WImage = None
 
-def points3(image): 
+    
+def points3(image): #äëÿ ñïëîøíîé äîðîãè
     XY=[]
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     blurred = cv2.GaussianBlur(gray, (7, 7), 0)
@@ -26,12 +27,17 @@ def points3(image):
             yy=int(y + h//2)+(HImage//10)*i
             cv2.rectangle(image,(xx,yy), (xx+3, yy+3),(255,0,0), 5)
             XY.append([xx, yy]) 
-    time.sleep(0.04)
+    time.sleep(0.008)
     return XY,image#!/usr/bin/env python3
+# image = cv2.imread("image.mp4", 1)
+# if __name__ == '__main__':
+#     image= points(image)
+#     cv2.imshow("1", image)
+#     cv2.waitKey(3)
 
 
 
-input_video_path = 'IMG_box/Video_from_drone_101.mp4'
+input_video_path = 'IMG_box/Video_from_drone_27_09_24.mp4'
 
 cap = cv2.VideoCapture(input_video_path)
 
@@ -40,6 +46,7 @@ HImage, WImage, _ = frame.shape
 
 while(cap.isOpened()):
     ret, frame = cap.read()
+    #print(frame, ret)
     if ret:
         xy, image= points3(frame)
         cv2.imshow("frame", frame)

@@ -6,7 +6,7 @@ import numpy as np
 
 drone = ardrone.ARDrone()
 fourcc = cv2.VideoWriter_fourcc(*'MJPG')
-out = cv2.VideoWriter('IMG_box//Video_from_drone.mp4', fourcc, 24.0, (640, 360))
+out = cv2.VideoWriter('IMG_box//Video_from_drone_27_09_24.mp4', fourcc, 24.0, (640, 360))
 
 try:
     while True:

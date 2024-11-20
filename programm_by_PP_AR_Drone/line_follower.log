@@ -1,0 +1,41 @@
+INFO:__main__:Start the loop with mode 0
+INFO:root:[keyboard] Init
+INFO:root:[keyboard] Start
+WARNING:__main__:Press Ctrl-Z
+WARNING:__main__:Press Ctrl-Z
+INFO:root:Mode: 9
+INFO:root:[keyboard] Exit
+WARNING:root:[main] warning
+INFO:root:[line] Init
+INFO:root:[line] Start
+ERROR:root:
+INFO:__main__:Start the loop with mode 0
+INFO:root:[keyboard] Init
+INFO:root:[keyboard] Start
+INFO:root:key a
+WARNING:__main__:Press Ctrl-Z
+WARNING:__main__:Press Ctrl-Z
+INFO:root:Mode: 9
+INFO:root:[keyboard] Exit
+WARNING:root:[main] warning
+INFO:root:[line] Init
+INFO:root:[line] Start
+ERROR:root:
+INFO:__main__:Start the loop with mode 0
+INFO:root:[keyboard] Init
+INFO:root:[keyboard] Start
+INFO:root:key a
+INFO:root:key a
+ERROR:root:
+INFO:__main__:Start the loop with mode 0
+INFO:root:[keyboard] Init
+INFO:root:[keyboard] Start
+INFO:root:key a
+INFO:root:key 1
+WARNING:__main__:Press Ctrl-Z
+WARNING:__main__:Press Ctrl-Z
+INFO:root:Mode: 9
+INFO:root:[keyboard] Exit
+WARNING:root:[main] warning
+INFO:root:[line] Init
+INFO:root:[line] Start

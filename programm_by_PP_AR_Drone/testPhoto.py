@@ -1,5 +1,5 @@
 from select import select
-from math import atan2
+import math
 import ardrone
 import numpy as np
 import sys
@@ -8,11 +8,24 @@ import tty
 import cv2
 import time
 
-import threading
-mutex = threading.Lock() # блотировка и разблокировка потоков
+import signal
+import logging
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(filename='line_follower.log', level=logging.DEBUG)
 
 H = 360  # высота изобразения
-W =  640  # ширина изображения
+W = 640  # ширина изображения
+MODE = 0
+CHANGE_STATE = False
+
+def signal_handler(sig, frame):
+    global MODE, CHANGE_STATE
+    logger.warning("Press Ctrl-Z")
+    MODE = int(input("Copter mode:"))
+    logging.info(f"Mode: {MODE}")
+    CHANGE_STATE = True
+
 
 class PID_controller():    # Класс для работы с ПИД-регулятором
 
@@ -101,7 +114,7 @@ def detect_markers(image):
 
             aruco_type_list.append(aruco_type)
 
-            print(f"Markers detected using {aruco_type} dictionary")
+            logging.info(f"Markers detected using {aruco_type} dictionary")
 
             for markerCorner, markerId in zip(corners, ids.flatten()):
                 corners_aruco = markerCorner.reshape((4, 2))
@@ -204,24 +217,20 @@ def get_line_xy(img):  # Функция для следования по лин�
             if (H//2 - cord_dot[1]) > 0:
                 X = cord_dot[0]
                 Y = cord_dot[1]
-                # print(f'X = {X}, Y = {Y}')
+                # logging.info(f'X = {X}, Y = {Y}')
                 break
 
 
         cv2.circle(img, (int(W//2), int(H//2)), 5, (0, 255, 0), -1)
         cv2.circle(img, (int(W//2), int(H//2 - 50)), 5, (0, 0, 255), -1)
         cv2.circle(img, (int(X), int(Y)), 7, (255, 255, 0), 1)
-        # cv2.imwrite("Line_stream.jpg", img)
 
-        # line_x, line_y = get_new_points(X, Y, h, w)
         line_x = H//2 - Y
         line_y = W//2 - X
-        # print(f'line_x = {line_x}, line_y = {line_y}')
-        # print(X, w//2, Y, h//2, line_x, line_y)
     else:
         line_x, line_y = 0, 0
 
-    cv2.imwrite("Line_stream.jpg", img)
+    # cv2.imwrite("Line_stream.jpg", img)
     return line_x, line_y
 
 
@@ -272,7 +281,7 @@ def get_cross_xy(img): #  Функция для следования за кре
 
         line_x = H//2 - cy
         line_y = W//2 - cx
-        #print(f'x == {cx}. y == {cy}; line_x = {line_x}, line_y = {line_y}',end=";")
+        #logging.info(f'x == {cx}. y == {cy}; line_x = {line_x}, line_y = {line_y}',end=";")
     else:
         line_x, line_y = 0, 0
     return line_x, line_y
@@ -281,7 +290,7 @@ def get_cross_xy(img): #  Функция для следования за кре
 
 def control_keyboard(drone: my_ARDrone, settings, key_timeout): # Запуск алгоритма обраьотки сигнала с клавиаиуры 
 
-    print("[keyboard] Init")
+    logging.info("[keyboard] Init")
 
     drone.set_cam(1)
 
@@ -307,13 +316,13 @@ def control_keyboard(drone: my_ARDrone, settings, key_timeout): # Запуск �
         'L': drone.move_right
     }
 
-    print("[keyboard] Start")
+    logging.info("[keyboard] Start")
     while not CHANGE_STATE:
         tic = time.time()
 
         key = getKey(settings, key_timeout)
         if key in box_cmds.keys():
-            print("key", key)
+            logging.info(f"key {key}")
             box_cmds[key]()
 
         toc = time.time()
@@ -321,13 +330,13 @@ def control_keyboard(drone: my_ARDrone, settings, key_timeout): # Запуск �
         if sleepTime > 0:
             time.sleep(sleepTime)
         else:
-            print("[keyboard] warning")
+            logging.info("[keyboard] warning")
 
-    print("[keyboard] Exit")
+    logging.info("[keyboard] Exit")
 
 def control_line(drone: my_ARDrone):  # Запуск алгоритма по линии  
 
-    print("[line] Init")
+    logging.info("[line] Init")
 
     drone.set_cam(1)
 
@@ -336,10 +345,10 @@ def control_line(drone: my_ARDrone):  # Запуск алгоритма по л�
     drone.set_yaw(0.35)
 
     # Подбираем коэффициенты для ПИД
-    PID_line_x = PID_controller(k_p=0.0004, k_i=0.0, k_d=0.0005, h=0.04)
-    PID_line_y = PID_controller(k_p=0.00025, k_i=0.0, k_d=0.0005, h=0.04)
-    PID_yaw = PID_controller(k_p=-0.04, k_i=0.0, k_d=0.05, h=0.04)
-    
+    H = 1.0
+    PID_line_x = PID_controller(k_p=0.0, k_i=0.0, k_d=0.0, h=H)
+    PID_line_y = PID_controller(k_p=0.001, k_i=0.0, k_d=0.0, h=H)
+    PID_yaw = PID_controller(k_p=0.0, k_i=0.0, k_d=0.0, h=H)
 
     # Desired line point
     cx = 0
@@ -353,37 +362,37 @@ def control_line(drone: my_ARDrone):  # Запуск алгоритма по л�
     vy = 0
     wz = 0
     
-    print("[line] Start")
+    logging.info("[line] Start")
     while not CHANGE_STATE:
         tic = time.time()
-
         img = np.array(drone.image)
+        cv2.imwrite("Line_stream.jpg", img)
 
         if img is not None:
             etheta_last = etheta
-            # cx, cy = get_cross_xy(img)
             cx, cy = get_line_xy(img)
             cx_last, cy_last = cx, cy
-            etheta = -atan2(cy, cx)
-            # vx = PID_line_x.updateP(e_now=cx)
-            # vy = PID_line_y.updateP(e_now=cy)
-            # wz = PID_yaw.updateP(e_now=etheta)
+            etheta = -math.atan2(cy, cx)
 
             # Используем ПД-регулятор
-            vx = PID_line_x.updatePD(e_now=cx, e_last=cx_last)
+            # vx = PID_line_x.updatePD(e_now=cx, e_last=cx_last)
             vy = PID_line_y.updatePD(e_now=cy, e_last=cy_last)
-            wz = PID_yaw.updatePD(e_now=etheta, e_last=etheta_last)
-            # print(f"Vx = {vx}, Vy = {vy}")
+            # wz = PID_yaw.updatePD(e_now=etheta, e_last=etheta_last)
+
+            # logging.info(f"Center {cx}, {cy}")
+            # logging.info(f"Control {vy}")
             
             
             if vx > 1.0:
                 vx = 1.0
             elif vx < -1.0:
                 vx = -1.0
+
             if vy > 1.0:
                 vy = 1.0
             elif vy < -1.0:
                 vy = -1.0
+
             if wz > 1.0:
                 wz = 1.0
             elif wz < -1.0:
@@ -397,15 +406,15 @@ def control_line(drone: my_ARDrone):  # Запуск алгоритма по л�
             wz = 0
             drone.hover()
 
-        # print(f' vx = {vx}, vy = {vy}, wz = {wz}')
+        # logging.info(f' vx = {vx}, vy = {vy}, wz = {wz}')
         toc = time.time()
-        sleepTime = 0.04 - (toc - tic)
+        sleepTime = H - (toc - tic)
         if sleepTime > 0:
             time.sleep(sleepTime)
         else:
-            print("[line] warning")
+            logging.warning("[line] warning")
         
-    print("[line] Exit")
+    logging.info("[line] Exit")
 
 
 def control_aruco(drone: my_ARDrone):  # Запуск алгоритма для Aruco-иакера
@@ -445,13 +454,11 @@ def control_aruco(drone: my_ARDrone):  # Запуск алгоритма для 
         drone.move_xyzw(vx, vy, z= 0.0, yaw=0.0)
 
         toc = time.time()
-        sleepTime = 0.04 - (toc - tic)
+        sleepTime = 1.0/30 - (toc - tic)
         if sleepTime > 0:
             time.sleep(sleepTime)
         else:
-            print("warning")
-
-CHANGE_STATE = False
+            logging.info("warning")
 
 # Словарь связки символами клавиатуры  с запуском нужного алгоритма 
 control_keys = {
@@ -466,52 +473,28 @@ if __name__ == "__main__":
     key_timeout = 0.5
 
     drone = my_ARDrone()
-
-    # Start in keyboar control mode
-    control_thread = threading.Thread(target=control_keys["0"], args=(drone, settings, key_timeout))
-    control_thread.start()
+    signal.signal(signal.SIGTSTP, signal_handler)
+    logger.info(f"Start the loop with mode {MODE}")
 
     try:
+
         while True:
-            # print("Ping")
 
             tic = time.time()
             key = getKey(settings, key_timeout)
 
-            if key == "\x03":
-                break
-
-            if key in control_keys:
-                # print("Change mode")
-
-                with mutex:
-                    CHANGE_STATE = True
-                # print("Change state")
-                control_thread.join(0.1)
-
-                if key == "0":
-                    print("Mode: keyboard")
-                    control_thread = threading.Thread(target=control_keys[key], args=(drone, settings, key_timeout))
-                elif key == "9":
-                    print("Mode: line")
-                    control_thread = threading.Thread(target=control_keys[key], args=(drone,))
-                elif key == "8":
-                    print("Mode: aruco")
-                    control_thread = threading.Thread(target=control_keys[key], args=(drone,))
-
-                with mutex:
-                    CHANGE_STATE = False
-                control_thread.start()
+            img = np.array(drone.image)
+            cv2.imwrite("Line_stream.jpg", img)
 
             toc = time.time()
-            sleepTime = 0.8 - (toc - tic)
+            sleepTime = 1/10 - (toc - tic)
             if sleepTime > 0:
                 time.sleep(sleepTime)
             else:
-                print("[main] warning")
+                logging.warning("[main] warning")
 
     except KeyboardInterrupt as e:
-        print(e)
+        logging.error(e)
     finally:
         restoreTerminalSettings(settings)
         drone.halt()
